@@ -241,16 +241,98 @@ void ConvertNormalModes ( ifstream & inFile, ofstream & outFile )
   WriteNormalModes(outFile,modes);
 }
 
+void ConvertAtoms ( ifstream & inFile, ofstream & outFile )
+{
+  string line;
+  stringstream ss;
+  unsigned int natom;
+  getline(inFile,line);
+  for ( unsigned int i = 0; i < 4; i++ )
+  {
+    getline(inFile,line);
+    outFile << line << endl;
+  }
+  getline(inFile,line);
+  ss << line;
+  ss >> natom;
+  for ( unsigned int i = 0; i < natom; i++ )
+  {
+    string el;
+    double wt, x, y, z;
+    ss.clear(); ss.str("");
+    getline(inFile,line);
+    ss << line;
+    ss >> el >> wt >> x >> y >> z;
+    outFile << setw(2) << el;
+    outFile << setw(13) << setprecision(5) << wt;
+    outFile << setw(14) << setprecision(6) << x;
+    outFile << setw(13) << setprecision(6) << y;
+    outFile << setw(13) << setprecision(6) << z << endl;
+  }
+  outFile << endl;
+  getline(inFile,line);
+}
+
+void CopyTemperature ( ifstream & inFile, ofstream & outFile )
+{
+  string line;
+  for ( unsigned int i = 0; i < 3; i++ )
+  {
+    getline(inFile,line);
+    outFile << line << endl;
+  }
+}
+
+void ConvertDipole ( ifstream & inFile, ofstream & outFile )
+{
+  stringstream ss;
+  string line;
+  unsigned int num;
+  for ( unsigned int i = 0; i < 3; i++ ) getline(inFile,line);
+  getline(inFile,line);
+  outFile << line << endl;
+  getline(inFile,line);
+  ss << line;
+  ss >> num;
+  outFile << num << endl;
+  for ( unsigned int i = 0; i < num; i++ )
+  {
+    double x, y, z;
+    ss.clear(); ss.str("");
+    getline(inFile,line);
+    ss << line;
+    ss >> x >> y >> z;
+    outFile << setw(13) << setprecision(6) << x;
+    outFile << setw(13) << setprecision(6) << y;
+    outFile << setw(13) << setprecision(6) << z << endl;
+  }
+  outFile << endl;
+  getline(inFile,line);
+}
+
+void CopyTheRest ( ifstream & inFile, ofstream & outFile )
+{
+  string line;
+  stringstream ss;
+  getline(inFile,line);
+  while ( line.find("$end") == string::npos )
+  {
+    outFile << line << endl;
+    getline(inFile,line);
+  }
+  outFile << line << endl;
+}
+
 void ReadWriteHessian ( ifstream & inFile, ofstream & outFile )
 {
   CopyToHess(inFile,outFile);
   ConvertHess(inFile,outFile);
   CopyEnergies(inFile,outFile);
   ConvertNormalModes(inFile,outFile);
-  /*ConvertAtoms(inFile,outFile);
+  ConvertAtoms(inFile,outFile);
   CopyTemperature(inFile,outFile);
   ConvertDipole(inFile,outFile);
-  CopyTheRest(inFile,outFile);*/
+  CopyTheRest(inFile,outFile);
 }
 
 int main ( int argc, char* argv[] )
