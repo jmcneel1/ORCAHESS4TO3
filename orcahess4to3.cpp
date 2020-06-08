@@ -255,6 +255,7 @@ void ConvertAtoms ( ifstream & inFile, ofstream & outFile )
   getline(inFile,line);
   ss << line;
   ss >> natom;
+  outFile << natom << endl;
   for ( unsigned int i = 0; i < natom; i++ )
   {
     string el;
