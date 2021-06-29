@@ -8,29 +8,43 @@
 
 using namespace std;
 
-void CopyToHess ( ifstream & inFile, ofstream & outFile )
+/*
+This procedure copies the contents of the input hessian file into the
+version 3 hessian file up to the termination flag
+*/
+void CopyToFlag ( ifstream & inFile, ofstream & outFile, string flag )
 {
   string line;
   getline(inFile,line);
-  while ( line.find("$hessian") == string::npos )
+  while ( line.find(flag) == string::npos &&
+          ! inFile.eof() )
   {
-    outFile << line << endl;
+    outFile << line << '\n';
     getline(inFile,line);
   }
-  outFile << line << endl;
+  outFile << line << '\n';
+  if ( inFile.eof() )
+  {
+    cout << flag << " not found! Exiting\n";
+    exit(2);
+  }
 }
 
-void ReadHess ( ifstream & inFile, vector< vector< double > > & hess )
+/*
+This procedure reads the hessian from version 4 into an array
+We start in the input buffer after the line containing the number of
+atoms * 3 ... 3N
+These are line 0 1 2 3 4 5 \n 3N Hessian Rows \n 6 7 ...
+*/
+void ReadHess ( ifstream & inFile, double* hess, unsigned int nmode )
 {
    stringstream ss;
    string line;
-   unsigned int dim;
-   getline(inFile,line); ss << line; ss >> dim;
-   for ( unsigned int i = 0; i < dim/5; i++ )
+   unsigned int index{0};
+   for ( unsigned int i = 0; i < nmode/5; i++ ) // First we loop over "full" lines
    {
-     for ( unsigned int j = 0; j < 5; j++ ) hess.push_back(vector<double>());
-     getline(inFile,line);
-     for ( unsigned int j = 0; j < dim; j++ )
+     getline(inFile,line); // This will be column label
+     for ( unsigned int j = 0; j < nmode; j++ )
      {
        unsigned int num;
        double t1, t2, t3, t4, t5;
@@ -38,29 +52,28 @@ void ReadHess ( ifstream & inFile, vector< vector< double > > & hess )
        getline(inFile,line);
        ss << line;
        ss >> num >> t1 >> t2 >> t3 >> t4 >> t5;
-       hess[i*5].push_back(t1);
-       hess[i*5+1].push_back(t2);
-       hess[i*5+2].push_back(t3);
-       hess[i*5+3].push_back(t4);
-       hess[i*5+4].push_back(t5);
+       hess[i*5*nmode+j] = t1;
+       hess[(i*5+1)*nmode+j] = t2;
+       hess[(i*5+2)*nmode+j] = t3;
+       hess[(i*5+3)*nmode+j] = t4;
+       hess[(i*5+4)*nmode+j] = t5;
      }
    }
-   if ( dim%5 != 0 )
+   if ( nmode%5 != 0 )
    {
      getline(inFile,line);
-     for ( unsigned int i = 0; i < dim%5; i++ ) hess.push_back(vector<double>());
-     for ( unsigned int i = 0; i < dim; i++ )
+     for ( unsigned int i = 0; i < nmode; i++ )
      {
        getline(inFile,line);
        ss.clear(); ss.str("");
        unsigned int num;
        ss << line;
        ss >> num;
-       for ( unsigned int j = 0; j < dim%5; j++ )
+       for ( unsigned int j = 0; j < nmode%5; j++ )
        {
          double t1;
          ss >> t1;
-         hess[(dim/5)*5+j].push_back(t1);
+         hess[((nmode/5)*5+j)*nmode+i] = t1;
        }
      }
    }
@@ -113,48 +126,48 @@ void ReadNormalModes ( ifstream & inFile, vector< vector< double > > & modes )
    }
 }
 
-void WriteHess ( ofstream & outFile, const vector< vector< double > > & hess )
+void WriteHess ( ofstream & outFile, const double* hess, unsigned int nmode )
 {
-  outFile << hess[0].size() << endl;
-  for ( unsigned int i = 0; i < hess[0].size()/6; i++ )
+  outFile << nmode << '\n';
+  for ( unsigned int i = 0; i < nmode/6; i++ )
   {
     outFile << setw(19) << i*6;
     for ( unsigned int j = 0; j < 5; j++ )
     {
       outFile << setw(11) << i*6+j+1;
     }
-    outFile << endl;
-    for ( unsigned int j = 0; j < hess[0].size(); j++ )
+    outFile << '\n';
+    for ( unsigned int j = 0; j < nmode; j++ )
     {
       outFile << setw(7) << j;
       outFile << "    ";
       for ( unsigned int k = 0; k < 6; k++ )
       {
-        outFile << setw(11) << fixed << setprecision(6) << hess.at(i*6+k).at(j);
+        outFile << setw(11) << fixed << setprecision(6) << hess[(i*6+k)*nmode+j];
       }
-      outFile << endl;
+      outFile << '\n';
     }
   }
-  if ( hess[0].size()%6 !=0 )
+  if ( nmode%6 !=0 )
   {
-    outFile << setw(19) << (hess[0].size()/6)*6;
-    for ( unsigned int i = 1; i < hess[0].size()%6; i++ )
+    outFile << setw(19) << (nmode/6)*6;
+    for ( unsigned int i = 1; i < nmode%6; i++ )
     {
-      outFile << setw(11) << (hess[0].size()/6)*6+i;
+      outFile << setw(11) << (nmode/6)*6+i;
     }
-    outFile << endl;
-    for ( unsigned int i = 0; i < hess[0].size(); i++ )
+    outFile << '\n';
+    for ( unsigned int i = 0; i < nmode; i++ )
     {
       outFile << setw(7) << i;
       outFile << "    ";
-      for ( unsigned int j = 0; j < hess[0].size()%6; j++ )
+      for ( unsigned int j = 0; j < nmode%6; j++ )
       {
-        outFile << setw(11) << fixed << setprecision(6) << hess.at((hess[0].size()/6)*6+j).at(i);
+        outFile << setw(11) << fixed << setprecision(6) << hess[((nmode/6)*6+j)*nmode+i];
       }
-      outFile << endl;
+      outFile << '\n';
     }
   }
-  outFile << endl;
+  outFile << '\n';
 }
 
 void WriteNormalModes ( ofstream & outFile, const vector< vector< double > > & modes )
@@ -204,9 +217,15 @@ void WriteNormalModes ( ofstream & outFile, const vector< vector< double > > & m
 
 void ConvertHess ( ifstream & inFile, ofstream & outFile )
 {
-  vector<vector<double > > hess;
-  ReadHess(inFile,hess);
-  WriteHess(outFile,hess);
+  unsigned int nmode;
+  string line;
+  stringstream ss;
+  getline(inFile,line); // This should be 3*N
+  ss << line;
+  ss >> nmode;
+  double hess[nmode*nmode];
+  ReadHess(inFile,hess,nmode);
+  WriteHess(outFile,hess,nmode);
 }
 
 void CopyEnergies ( ifstream & inFile, ofstream & outFile )
@@ -326,14 +345,16 @@ void CopyTheRest ( ifstream & inFile, ofstream & outFile )
 
 void ReadWriteHessian ( ifstream & inFile, ofstream & outFile )
 {
-  CopyToHess(inFile,outFile);
+  CopyToFlag(inFile,outFile,"$hessian");
   ConvertHess(inFile,outFile);
-  CopyEnergies(inFile,outFile);
+  /*
+  CopyToFlag(inFile,outFile,"$normal_modes");
   ConvertNormalModes(inFile,outFile);
   ConvertAtoms(inFile,outFile);
   CopyTemperature(inFile,outFile);
   ConvertDipole(inFile,outFile);
-  CopyTheRest(inFile,outFile);
+  CopyToFlag(inFile,outFile,"$end");
+  */
 }
 
 int main ( int argc, char* argv[] )
