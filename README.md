@@ -12,3 +12,6 @@ The differences are as follows:
    uses fixed notation.
 3. ORCA 4 uses %.10E, 3 uses %.6f
 4. Column width for v4 is setw(19), for v3 is setw(11)
+5. Atoms, v4 uses .5f for weights, v4 uses .4f
+6. Atoms, v4 uses .12f for coords, v3 uses .6f [setw(19),setw(13)]
+7. Dipole derivatives, setw(20) .10E vs. setw(13) .6f
