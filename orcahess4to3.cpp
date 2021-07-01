@@ -31,9 +31,9 @@ void CopyToFlag ( ifstream & inFile, ofstream & outFile, string flag )
 }
 
 /*
-This procedure reads the hessian from version 4 into an array
+This procedure reads the a matrix from version 4 into an array.
 We start in the input buffer after the line containing the number of
-atoms * 3 ... 3N
+modes or dimensions
 These are line 0 1 2 3 4 5 \n 3N Hessian Rows \n 6 7 ...
 */
 void ReadMatrix ( ifstream & inFile, double* matrix, unsigned int nmode )
@@ -80,20 +80,26 @@ void ReadMatrix ( ifstream & inFile, double* matrix, unsigned int nmode )
    }
 }
 
+/*
+  Here we take the array read in from ReadMatrix and write out the matrix
+  in the format needed for v3 of ORCA
+  We have %.6f in fixed format for all the entries in v3 with the
+  widths shown below and described in the Readme
+*/
 void WriteMatrix ( ofstream & outFile, const double* hess, unsigned int nmode )
 {
-  for ( unsigned int i = 0; i < nmode/6; i++ )
+  for ( unsigned int i = 0; i < nmode/6; i++ ) // first we take the 'full' lines
   {
-    outFile << setw(19) << i*6;
+    outFile << setw(19) << i*6; // the first column entry has a width of 19
     for ( unsigned int j = 0; j < 5; j++ )
     {
-      outFile << setw(11) << i*6+j+1;
+      outFile << setw(11) << i*6+j+1; // followed by a width of 11
     }
     outFile << '\n';
-    for ( unsigned int j = 0; j < nmode; j++ )
+    for ( unsigned int j = 0; j < nmode; j++ ) // now the actual matrix entries
     {
-      outFile << setw(7) << j;
-      outFile << "    ";
+      outFile << setw(7) << j; // first the coordinate identifier
+      outFile << "    "; // a spacer so setw is the same in the loop
       for ( unsigned int k = 0; k < 6; k++ )
       {
         outFile << setw(11) << fixed << setprecision(6) << hess[(i*6+k)*nmode+j];
@@ -101,7 +107,7 @@ void WriteMatrix ( ofstream & outFile, const double* hess, unsigned int nmode )
       outFile << '\n';
     }
   }
-  if ( nmode%6 !=0 )
+  if ( nmode%6 !=0 ) // now the "rest"
   {
     outFile << setw(19) << (nmode/6)*6;
     for ( unsigned int i = 1; i < nmode%6; i++ )
@@ -142,7 +148,7 @@ void ConvertNormalModes ( ifstream & inFile, ofstream & outFile )
   stringstream ss;
   string line;
   unsigned int nmodes{};
-  getline(inFile,line);
+  getline(inFile,line); // This should be 3*N 3*N
   ss << line;
   ss >> nmodes;
   double modes[nmodes*nmodes];
@@ -157,10 +163,14 @@ void ConvertAtoms ( ifstream & inFile, ofstream & outFile )
   stringstream ss;
   unsigned int natom;
   CopyToFlag(inFile,outFile,"$atoms");
-  getline(inFile,line);
+  getline(inFile,line); // This is the number of atoms
   ss << line;
   ss >> natom;
   outFile << natom << '\n';
+  /*
+    Here we read the atoms and write them to the v3 file.
+    We don't store the geometry because we don't need it again.
+  */
   for ( unsigned int i = 0; i < natom; i++ )
   {
     string el;
@@ -182,10 +192,14 @@ void ConvertDipole ( ifstream & inFile, ofstream & outFile )
   stringstream ss;
   string line;
   unsigned int nmodes;
-  getline(inFile,line);
+  getline(inFile,line); // This should be the number of modes
   ss << line;
   ss >> nmodes;
   outFile << nmodes << '\n';
+  /*
+    Here we read the dipole derivatives and write them to the v3 file.
+    We don't store them because we don't need it again.
+  */
   for ( unsigned int i = 0; i < nmodes; i++ )
   {
     double x, y, z;
@@ -197,19 +211,6 @@ void ConvertDipole ( ifstream & inFile, ofstream & outFile )
     outFile << fixed << setw(13) << setprecision(6) << y;
     outFile << fixed << setw(13) << setprecision(6) << z << '\n';
   }
-}
-
-void CopyTheRest ( ifstream & inFile, ofstream & outFile )
-{
-  string line;
-  stringstream ss;
-  getline(inFile,line);
-  while ( line.find("$end") == string::npos )
-  {
-    outFile << line << endl;
-    getline(inFile,line);
-  }
-  outFile << line << endl;
 }
 
 void ReadWriteHessian ( ifstream & inFile, ofstream & outFile )
